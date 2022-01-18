@@ -7,11 +7,15 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 #                    get_single_animal, get_single_customer, get_single_employee,
 #                    get_single_location, update_animal, update_customer,
 #                    update_employee, update_location)
-from views import (get_all_animals,
-                   get_all_customers, get_all_employees, get_all_locations,
-                   get_single_animal, get_single_customer, get_single_employee,
-                   get_single_location, get_customers_by_email, get_animals_by_location,
-                   get_employees_by_location, get_animals_by_status, delete_animal, update_animal)
+from views import (
+    get_all_animals, get_all_customers, get_all_employees, get_all_locations,
+    get_single_animal, get_single_customer, get_single_employee,
+    get_single_location, get_customers_by_email, get_animals_by_location,
+    get_employees_by_location, get_animals_by_status, delete_animal, update_animal, create_animal,
+    delete_employee, update_employee, create_employee, delete_customer, update_customer, create_customer,
+    delete_location, update_location, create_location
+    
+)
 
 # Here's a class. It inherits from another class.
 # For now, think of a class as a container for functions that

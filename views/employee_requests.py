@@ -1,6 +1,6 @@
 import sqlite3
 import json
-from models import Employee
+from models import Employee, Location
 
 def get_all_employees():
     # Open a connection to the database
@@ -13,11 +13,15 @@ def get_all_employees():
         # Write the SQL query to get the information you want
         db_cursor.execute("""
         SELECT
-            a.id,
-            a.name,
-            a.address,
-            a.location_id
-        FROM employee a
+            e.id,
+            e.name,
+            e.address,
+            e.location_id,
+            l.name location_name,
+            l.address location_address
+        FROM Employee e
+        JOIN Location l
+            ON e.location_id = l.id 
         """)
 
         # Initialize an empty list to hold all employee representations
@@ -34,6 +38,10 @@ def get_all_employees():
             # exact order of the parameters defined in the
             # Employee class above.
             employee = Employee(row['id'], row['name'], row['address'], row['location_id'])
+            
+            location = Location( row['location_id'], row['location_name'], row['location_address'])
+            
+            employee.location= location.__dict__
 
             employees.append(employee.__dict__)
 
@@ -95,122 +103,64 @@ def get_single_employee(id):
         return json.dumps(employee.__dict__)
 
 
-# EMPLOYEES = [
-#     {
-#         "id": 1,
-#         "name": "Jessica Younker",
-#         "email": "jessica@younker.com"
-#     },
-#     {
-#         "id": 3,
-#         "name": "Zoe LeBlanc",
-#         "email": "zoe@leblanc.com"
-#     },
-#     {
-#         "name": "Meg Ducharme",
-#         "email": "meg@ducharme.com",
-#         "id": 4
-#     },
-#     {
-#         "name": "Hannah Hall",
-#         "email": "hannah@hall.com",
-#         "id": 5
-#     },
-#     {
-#         "name": "Emily Lemmon",
-#         "email": "emily@lemmon.com",
-#         "id": 6
-#     },
-#     {
-#         "name": "Jordan Castelloe",
-#         "email": "jordan@castelloe.com",
-#         "id": 7
-#     },
-#     {
-#         "name": "Leah Gwin",
-#         "email": "leah@gwin.com",
-#         "id": 8
-#     },
-#     {
-#         "name": "Caitlin Stein",
-#         "email": "caitlin@stein.com",
-#         "id": 9
-#     },
-#     {
-#         "name": "Charisse Lambert",
-#         "email": "charisse@lambert.com",
-#         "id": 11
-#     },
-#     {
-#         "name": "Madi Peper",
-#         "email": "madi@peper.com",
-#         "id": 12
-#     },
-#     {
-#         "name": "Jenna Solis",
-#         "email": "jenna@solis.com",
-#         "id": 14
-#     }
-# ]
 
-# def get_all_employees():
-#     """Returns full list of employees
-#     """
-#     return EMPLOYEES
+def delete_employee(id):
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+        db_cursor = conn.cursor()
 
-# # Function with a single parameter
-# def get_single_employee(id):
-#     """Returns one employee
-#     """
-#     # Variable to hold the found employee, if it exists
-#     requested_employee = None
+        db_cursor.execute("""
+        DELETE FROM employee
+        WHERE id = ?
+        """, (id, ))
 
-#     # Iterate the EMPLOYEES list above. Very similar to the
-#     # for..of loops you used in JavaScript.
-#     for employee in EMPLOYEES:
-#         # Dictionaries in Python use [] notation to find a key
-#         # instead of the dot notation that JavaScript used.
-#         if employee["id"] == id:
-#             requested_employee = employee
 
-#     return requested_employee
+def update_employee(id, new_employee):
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+        db_cursor = conn.cursor()
 
-# def create_employee(employee):
-#     # Get the id value of the last employee in the list
-#     max_id = EMPLOYEES[-1]["id"]
+        db_cursor.execute("""
+        UPDATE Employee
+            SET
+                name = ?,
+                address = ?,
+                location_id = ?
+        WHERE id = ?
+        """, (new_employee['name'], new_employee['address'],
+              new_employee['location_id'], id ))
 
-#     # Add 1 to whatever that number is
-#     new_id = max_id + 1
+        # Were any rows affected?
+        # Did the client send an `id` that exists?
+        rows_affected = db_cursor.rowcount
 
-#     # Add an `id` property to the employee dictionary
-#     employee["id"] = new_id
+    if rows_affected == 0:
+        # Forces 404 response by main module
+        return False
+    else:
+        # Forces 204 response by main module
+        return True
 
-#     # Add the employee dictionary to the list
-#     EMPLOYEES.append(employee)
 
-#     # Return the dictionary with `id` property added
-#     return employee
+def create_employee(new_employee):
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+        db_cursor = conn.cursor()
 
-# def delete_employee(id):
-#     # Initial -1 value for employee index, in case one isn't found
-#     employee_index = -1
+        db_cursor.execute("""
+        INSERT INTO Employee
+            ( name, address, location_id)
+        VALUES
+            ( ?, ?, ?, ?, ?);
+        """, (new_employee['name'], new_employee['address'],
+                new_employee['location_id']))
 
-#     # Iterate the EMPLOYEES list, but use enumerate() so that you
-#     # can access the index value of each item
-#     for index, employee in enumerate(EMPLOYEES):
-#         if employee["id"] == id:
-#             # Found the employee. Store the current index.
-#             employee_index = index
+        # The `lastrowid` property on the cursor will return
+        # the primary key of the last thing that got added to
+        # the database.
+        id = db_cursor.lastrowid
 
-#     # If the employee was found, use pop(int) to remove it from list
-#     if employee_index >= 0:
-#         EMPLOYEES.pop(employee_index)
+        # Add the `id` property to the employee dictionary that
+        # was sent by the client so that the client sees the
+        # primary key in the response.
+        new_employee['id'] = id
 
-# def update_employee(id, new_employee):
-#     # Iterate the EMPLOYEES list, but use enumerate() so that
-#     # you can access the index value of each item.
-#     for index, employee in enumerate(EMPLOYEES):
-#         if employee["id"] == id:
-#             # Found the employee. Update the value.
-#             EMPLOYEES[index] = new_employee
-#             break
+
+    return json.dumps(new_employee)

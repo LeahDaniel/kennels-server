@@ -66,75 +66,62 @@ def get_single_location(id):
 
         return json.dumps(location.__dict__)
 
-# LOCATIONS = [
-#     {
-#         "id": 1,
-#         "name": "Nashville North"
-#     },
-#     {
-#         "id": 2,
-#         "name": "Nashville South"
-#     }
-# ]
 
-# def get_all_locations():
-#     """Returns full list of locations
-#     """
-#     return LOCATIONS
 
-# # Function with a single parameter
-# def get_single_location(id):
-#     """Returns one location
-#     """
-#     # Variable to hold the found location, if it exists
-#     requested_location = None
+def delete_location(id):
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+        db_cursor = conn.cursor()
 
-#     # Iterate the LOCATIONS list above. Very similar to the
-#     # for..of loops you used in JavaScript.
-#     for location in LOCATIONS:
-#         # Dictionaries in Python use [] notation to find a key
-#         # instead of the dot notation that JavaScript used.
-#         if location["id"] == id:
-#             requested_location = location
+        db_cursor.execute("""
+        DELETE FROM location
+        WHERE id = ?
+        """, (id, ))
 
-#     return requested_location
 
-# def create_location(location):
-#     # Get the id value of the last location in the list
-#     max_id = LOCATIONS[-1]["id"]
+def update_location(id, new_location):
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+        db_cursor = conn.cursor()
 
-#     # Add 1 to whatever that number is
-#     new_id = max_id + 1
+        db_cursor.execute("""
+        UPDATE Location
+            SET
+                name = ?,
+                address = ?
+        WHERE id = ?
+        """, (new_location['name'], new_location['address'], id ))
 
-#     # Add an `id` property to the location dictionary
-#     location["id"] = new_id
+        # Were any rows affected?
+        # Did the client send an `id` that exists?
+        rows_affected = db_cursor.rowcount
 
-#     # Add the location dictionary to the list
-#     LOCATIONS.append(location)
+    if rows_affected == 0:
+        # Forces 404 response by main module
+        return False
+    else:
+        # Forces 204 response by main module
+        return True
 
-#     # Return the dictionary with `id` property added
-#     return location
 
-# def delete_location(id):
-#     # Initial -1 value for location index, in case one isn't found
-#     location_index = -1
+def create_location(new_location):
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+        db_cursor = conn.cursor()
 
-#     # Iterate the LOCATIONS list, but use enumerate() so that you
-#     # can access the index value of each item
-#     for index, location in enumerate(LOCATIONS):
-#         if location["id"] == id:
-#             # Found the location. Store the current index.
-#             location_index = index
+        db_cursor.execute("""
+        INSERT INTO Location
+            ( name, address)
+        VALUES
+            ( ?, ?, ?, ?, ?);
+        """, (new_location['name'], new_location['address']))
 
-#     # If the location was found, use pop(int) to remove it from list
-#     if location_index >= 0:
-#         LOCATIONS.pop(location_index)
+        # The `lastrowid` property on the cursor will return
+        # the primary key of the last thing that got added to
+        # the database.
+        id = db_cursor.lastrowid
 
-# def update_location(id, new_location):
-#     # Iterate the LOCATIONS list, but use enumerate() so that
-#     # you can access the index value of each item.
-#     for index, location in enumerate(LOCATIONS):
-#         if location["id"] == id:
-#             # Found the location. Update the value.
-#             LOCATIONS[index] = new_location
-#             break
+        # Add the `id` property to the location dictionary that
+        # was sent by the client so that the client sees the
+        # primary key in the response.
+        new_location['id'] = id
+
+
+    return json.dumps(new_location)
